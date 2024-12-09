@@ -1,0 +1,32 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>uy.systemservice</groupId>
+  <artifactId>proxy-coolautomation-aws-iot</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  
+  <dependencies>
+    <!-- AWS IoT Device SDK -->
+    <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-iot-device-sdk-java -->
+	<dependency>
+	    <groupId>com.amazonaws</groupId>
+	    <artifactId>aws-iot-device-sdk-java</artifactId>
+	    <version>1.3.13</version>
+	</dependency>
+
+    
+    <!-- HTTP Client para consumir la API de CoolMaster -->
+    <dependency>
+        <groupId>org.apache.httpcomponents.client5</groupId>
+        <artifactId>httpclient5</artifactId>
+        <version>5.2</version>
+    </dependency>
+    
+    <!-- JSON Parsing -->
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.15.2</version>
+    </dependency>
+</dependencies>
+
+</project>
