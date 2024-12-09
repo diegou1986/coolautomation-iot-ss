@@ -1,8 +1,5 @@
 package proxy;
 
-import java.util.Map;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 public class IoTBridgeMain {
 
     public static void main(String[] args) {
@@ -10,8 +7,11 @@ public class IoTBridgeMain {
         CoolMasterAPI coolMasterAPI = new CoolMasterAPI();
         String topicStatus = "raspberrypi/data";
         String topicCommands = "raspberrypi/commands";
+        String topicResonse = "raspberrypi/commands/response";
 
         System.setProperty("com.amazonaws.services.iot.client.debug", "true");
+        System.setProperty("com.amazonaws.sdk.enableDefaultMetrics", "true");        
+		System.setProperty("https.protocols", "TLSv1.2");
 
         try {
             // Inicializar el puente
@@ -19,7 +19,7 @@ public class IoTBridgeMain {
             awsIoTBridge.connect();
 
             // Suscribirse al topic de comandos
-//            awsIoTBridge.subscribeToCommands();
+            awsIoTBridge.subscribeToTopic(topicCommands);
 
             // Publicar datos periódicamente
             while (true) {
@@ -38,7 +38,7 @@ public class IoTBridgeMain {
                     System.err.println("Error al publicar datos: " + e.getMessage());
                 }
 
-                Thread.sleep(30000); // Esperar 30 segundos antes de la siguiente publicación
+                Thread.sleep(1000); // Esperar 1 segundo antes de la siguiente publicación
             }
 
         } catch (Exception e) {
