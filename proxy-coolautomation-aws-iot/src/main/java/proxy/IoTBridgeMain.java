@@ -4,7 +4,7 @@ public class IoTBridgeMain {
 
     public static void main(String[] args) {
         AWSIoTBridge awsIoTBridge = null;
-        CoolMasterAPI coolMasterAPI = new CoolMasterAPI();
+//        CoolMasterAPI coolMasterAPI = new CoolMasterAPI();
         String topicStatus = "raspberrypi/data";
         String topicCommands = "raspberrypi/commands";
         String topicResonse = "raspberrypi/commands/response";

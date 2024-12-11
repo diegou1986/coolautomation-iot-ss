@@ -91,10 +91,12 @@ public class AWSIoTBridge {
                 case "apagar":
                     System.out.println("Apagando el equipo...");
                     // Lógica para apagar el equipo
-                    CoolMasterASCIIClient client = new CoolMasterASCIIClient();
+//                    CoolMasterASCIIClient client = new CoolMasterASCIIClient();
 
                     // Prueba el comando "line" para interactuar con CoolMaster
-                    String response = client.sendCommand("line");
+//                    String response = client.sendCommand("line");
+                    
+                    String response = "hola mundo";
                     if (response != null) {
                         System.out.println("Respuesta del CoolMaster: " + response);
                         responseMessage = "{\"status\": \"success\", \"command\": \"apagar\", \"message\": \"Equipo apagado correctamente.\"}";

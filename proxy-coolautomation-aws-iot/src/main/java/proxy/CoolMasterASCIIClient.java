@@ -5,7 +5,7 @@ import java.net.Socket;
 
 public class CoolMasterASCIIClient {
 
-    private static final String COOLMASTER_IP = "192.168.1.24";
+    private static final String COOLMASTER_IP = "192.168.1.26";
     private static final int COOLMASTER_PORT = 10102;
 
     public String sendCommand(String command) {
@@ -38,7 +38,7 @@ public class CoolMasterASCIIClient {
         CoolMasterASCIIClient client = new CoolMasterASCIIClient();
 
         // Prueba el comando "ls" para listar dispositivos
-        String response = client.sendCommand("line");
+        String response = client.sendCommand("status");
         if (response != null) {
             System.out.println("Respuesta del CoolMaster:");
             System.out.println(response);
