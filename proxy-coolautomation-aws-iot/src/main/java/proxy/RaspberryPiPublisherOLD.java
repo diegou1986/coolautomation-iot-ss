@@ -5,7 +5,9 @@ import java.util.TimerTask;
 
 public class RaspberryPiPublisherOLD {
     public static void main(String[] args) throws Exception {
-        AWSIoTBridge bridge = new AWSIoTBridge();
+    	
+    	ConfigLoader configLoader = new ConfigLoader();
+        AWSIoTBridge bridge = new AWSIoTBridge(configLoader);
         bridge.connect();
 
         Timer timer = new Timer();

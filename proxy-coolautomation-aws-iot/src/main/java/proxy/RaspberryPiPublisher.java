@@ -1,17 +1,20 @@
 package proxy;
 
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class RaspberryPiPublisher {
 	public static void main(String[] args) throws Exception {
-		AWSIoTBridge bridge = new AWSIoTBridge();
+		ConfigLoader configLoader = new ConfigLoader();
+        AWSIoTBridge bridge = new AWSIoTBridge(configLoader);
+        
 //        CoolMasterASCIIClient coolMasterClient = new CoolMasterASCIIClient();
 
 		// Conectar al puente AWS IoT
 		bridge.connect();
 
-		// Configuración del timer para enviar datos periódicamente
+		// Configuracio del timer para enviar datos periodicamente
 		Timer timer = new Timer();
 		timer.scheduleAtFixedRate(new TimerTask() {
 			@Override
@@ -39,9 +42,18 @@ public class RaspberryPiPublisher {
 							String uid = parts[0];
 							String onOff = parts[1];
 							String mode = parts[2];
-							int roomTemp = Integer.parseInt(parts[3]);
-							int setTemp = Integer.parseInt(parts[4]);
-							int humidity = Integer.parseInt(parts[5].replace("%", ""));
+							
+							
+//							int roomTemp = Integer.parseInt(parts[3]);
+//							int setTemp = Integer.parseInt(parts[4]);
+//							int humidity = Integer.parseInt(parts[5].replace("%", ""));
+							
+							Random random = new Random();
+
+							// Generar numeros aleatorios entre 0 y 4 y sumarlos
+							int roomTemp = Integer.parseInt(parts[3]) + random.nextInt(5); // nextInt(5) genera valores entre 0 y 4
+							int setTemp = Integer.parseInt(parts[4]) + random.nextInt(5);
+							int humidity = Integer.parseInt(parts[5].replace("%", "")) + random.nextInt(5);
 
 							// Crear el mensaje JSON
 							String message = String.format(
@@ -49,7 +61,7 @@ public class RaspberryPiPublisher {
 									"raspberrypi22", uid, onOff, mode, roomTemp, setTemp, humidity,
 									System.currentTimeMillis());
 
-							// Publicar al tópico de AWS IoT
+							// Publicar al topico de AWS IoT
 							bridge.publish("raspberrypi/data", message);
 							System.out.println("Datos publicados: " + message);
 						}

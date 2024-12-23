@@ -10,11 +10,11 @@ import com.amazonaws.services.iot.client.AWSIotMqttClient;
 
 public class IoTWebPublisher {
     private static final String CLIENT_ENDPOINT = "az7hwirb9l7ni-ats.iot.us-east-1.amazonaws.com"; // Endpoint
-    private static final String CLIENT_ID = "web-app-system-service"; // Client ID único
+    private static final String CLIENT_ID = "web-app-system-service"; // Client ID unico
 //    private static final String CLIENT_ID = "pc_oficina"; // ID del dispositivo
     private static final String CERT_RESOURCE_PATH = "/certificados/device-cert.p12"; // Ruta en resources
 //    private static final String CERT_RESOURCE_PATH = "/certificados/device-cert.p12"; // Ruta en resources
-    private static final String CERT_PASSWORD = "Maracaibo1!"; // Contraseña del .p12
+    private static final String CERT_PASSWORD = "Maracaibo1!"; // Contrasena del .p12
     
 //    private static final String CERT_RESOURCE_PATH = "D:\\Certificados\\web app\\app-web-system-service-cert.p12"; // Ruta de los certificados
                                                      
