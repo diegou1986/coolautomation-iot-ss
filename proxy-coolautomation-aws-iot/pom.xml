@@ -41,6 +41,22 @@
 			<artifactId>logback-classic</artifactId>
 			<version>1.4.11</version>
 		</dependency>
+		<dependency>
+		    <groupId>com.pi4j</groupId>
+		    <artifactId>pi4j-core</artifactId>
+		    <version>2.2.0</version> <!-- Versión más reciente -->
+		</dependency>
+		<dependency>
+		    <groupId>com.pi4j</groupId>
+		    <artifactId>pi4j-plugin-pigpio</artifactId>
+		    <version>2.2.0</version> <!-- Asegúrate de usar la versión más reciente -->
+		</dependency>
+		<dependency>
+		    <groupId>org.json</groupId>
+		    <artifactId>json</artifactId>
+		    <version>20230227</version>
+		</dependency>
+
 	</dependencies>
 	
 	<build>

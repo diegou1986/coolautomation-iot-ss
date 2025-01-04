@@ -1,22 +1,25 @@
 package proxy;
 
-import com.amazonaws.services.iot.client.AWSIotConnectionStatus;
-import com.amazonaws.services.iot.client.AWSIotException;
-import com.amazonaws.services.iot.client.AWSIotMessage;
-import com.amazonaws.services.iot.client.AWSIotMqttClient;
-import com.amazonaws.services.iot.client.AWSIotQos;
-import com.amazonaws.services.iot.client.AWSIotTopic;
-
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.security.KeyStore;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import java.io.FileInputStream;
-import java.security.KeyStore;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.amazonaws.services.iot.client.AWSIotConnectionStatus;
+import com.amazonaws.services.iot.client.AWSIotException;
+import com.amazonaws.services.iot.client.AWSIotMessage;
+import com.amazonaws.services.iot.client.AWSIotMqttClient;
+import com.amazonaws.services.iot.client.AWSIotQos;
+import com.amazonaws.services.iot.client.AWSIotTopic;
 
 public class AWSIoTBridge {
 
@@ -46,19 +49,19 @@ public class AWSIoTBridge {
 	private String topicStatus;
 
 	public AWSIoTBridge(ConfigLoader configLoader) throws Exception {
-		
-		//Primero leo las properties
-		
+
+		// Primero leo las properties
+
 		deviceID = configLoader.getProperty("device.id");
 		clientID = configLoader.getProperty("mqtt.client.id");
-        		
+
 		topicCommands = configLoader.getProperty("mqtt.topic.commands") + deviceID;
 		topicResponse = configLoader.getProperty("mqtt.topic.commands.response") + deviceID;
 		topicStatus = configLoader.getProperty("mqtt.topic.status") + deviceID;
-		
+
 		certDir = configLoader.getProperty("mqtt.cert.dir");
 		certPassword = configLoader.getProperty("mqtt.cert.pass");
-		
+
 		// Cargar certificados en un KeyStore
 		KeyStore keyStore = KeyStore.getInstance("PKCS12");
 
@@ -72,14 +75,17 @@ public class AWSIoTBridge {
 
 		// Inicializar el cliente MQTT con el KeyStore
 		mqttClient = new AWSIotMqttClient(CLIENT_ENDPOINT, clientID, keyStore, certPassword);
-
-		mqttClient.setKeepAliveInterval(60); // Enviar un ping cada 60 segundos
+		mqttClient.setKeepAliveInterval(30000); // Enviar un ping cada 60 segundos
 		mqttClient.setNumOfClientThreads(10);
-		mqttClient.setMaxOfflineQueueSize(1000); // Cola de hasta 100 mensajes mientras est� desconectado
+		mqttClient.setMaxOfflineQueueSize(10000); // Cola de hasta 1000 mensajes mientras está desconectado
+	
+//		//Prueba de más intentos de reconexion
+		mqttClient.setMaxConnectionRetries(10000);
+		mqttClient.setMaxRetryDelay(60000); // 1min
 
-		logger.info(deviceID + ": Cliente MQTT inicializado con KeyStore.");
+		logger.info(deviceID + ": Cliente MQTT inicializado con configuración de reconexión extendida.");
 
-		// Programar el monitoreo del estado de conexi�n
+		// Programar el monitoreo del estado de conexión
 		monitorConnectionStatus();
 
 	}
@@ -161,11 +167,13 @@ public class AWSIoTBridge {
 				logger.info("Estado de conexión: " + mqttClient.getConnectionStatus());
 
 				String heartbeatMessage = "heartbeat";
-//				String heartbeatMessage = "{\"status\": \"heartbeat\"}";
 				try {
 					mqttClient.publish(topicCommands, heartbeatMessage);
+
 					
-					publicarDatosTempHum();
+//					publicarDatosTempHumCoolMaster();
+
+					publicarDatosTempHumCoolRaspberry();
 				} catch (AWSIotException e) {
 					logger.error("Error al publicar datos al topico: " + topicStatus);
 				}
@@ -174,17 +182,15 @@ public class AWSIoTBridge {
 		}, 0, 60000); // Cada 60 segundos
 	}
 
-	
-	private void publicarDatosTempHum() throws AWSIotException {
-		
-		String rawResponse = """
-                UID         ON/OFF  MODE    RT     ST     HUM    FSPEED
-                L1.102      ON      COOL    25     22     55%    MED
-                L2.201      OFF     HEAT    24     22     50%    LOW
-                L3.301      ON      FAN     23     23     60%    HIGH
-                """;
+	private void publicarDatosTempHumCoolMaster() throws AWSIotException {
 
-		
+		String rawResponse = """
+				UID         ON/OFF  MODE    RT     ST     HUM    FSPEED
+				L1.102      ON      COOL    25     22     55%    MED
+				L2.201      OFF     HEAT    24     22     50%    LOW
+				L3.301      ON      FAN     23     23     60%    HIGH
+				""";
+
 		if (rawResponse != null) {
 			// Procesar la respuesta y convertirla en JSON
 			String[] lines = rawResponse.split("\n");
@@ -196,12 +202,12 @@ public class AWSIoTBridge {
 				String uid = parts[0];
 				String onOff = parts[1];
 				String mode = parts[2];
-				
+
 //				int roomTemp = Integer.parseInt(parts[3]);
 //				int setTemp = Integer.parseInt(parts[4]);
 //				int humidity = Integer.parseInt(parts[5].replace("%", ""));
-				
-				//PRUEBA
+
+				// PRUEBA
 				Random random = new Random();
 
 				// Generar numeros aleatorios entre 0 y 4 y sumarlos
@@ -212,21 +218,77 @@ public class AWSIoTBridge {
 				// Crear el mensaje JSON
 				String message = String.format(
 						"{\"deviceId\": \"%s\", \"uid\": \"%s\", \"onOff\": \"%s\", \"mode\": \"%s\", \"roomTemperature\": %d, \"setTemperature\": %d, \"humidity\": %d, \"timestamp\": %d}",
-						deviceID, uid, onOff, mode, roomTemp, setTemp, humidity,
-						System.currentTimeMillis());
-				
-				//TODO: cambiar el raspberry22 por el deviceID
+						deviceID, uid, onOff, mode, roomTemp, setTemp, humidity, System.currentTimeMillis());
 
 				// Publicar al topico de AWS IoT
 				mqttClient.publish(topicStatus, message);
 				logger.info("Datos publicados de " + deviceID + ": " + message);
-				
+
 			}
 		}
-		
+
 	}
-	
-	//GETTERS Y SETTERS
+
+	private void publicarDatosTempHumCoolRaspberry() throws AWSIotException {
+
+		try {
+
+			String command = "sudo myenv/bin/python3 /home/admin/dht22.py";
+
+			// Ejecutar el comando
+            Process process = Runtime.getRuntime().exec(command);
+
+            // Leer la salida estándar del script
+            BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            // Leer la salida de error del script
+            BufferedReader stdError = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
+            StringBuilder jsonOutput = new StringBuilder();
+            String line;
+
+            // Capturar la salida estándar
+            while ((line = stdInput.readLine()) != null) {
+                jsonOutput.append(line);
+            }
+
+            // Capturar errores, si los hay
+            System.out.println("Salida de error del script:");
+            while ((line = stdError.readLine()) != null) {
+            	logger.error(line);
+            }
+
+            // Esperar a que el proceso termine
+            int exitCode = process.waitFor();
+            logger.info("El script terminó con código: " + exitCode);
+
+            // Parsear la salida JSON del script
+            JSONObject jsonObject = new JSONObject(jsonOutput.toString());
+            if (jsonObject.has("temperature") && jsonObject.has("humidity")) {
+                double temp = jsonObject.getDouble("temperature");
+                double hum = jsonObject.getDouble("humidity");
+
+                // Crear el mensaje JSON para publicar en MQTT
+                String message = String.format(
+                	    "{\"deviceId\": \"%s\", \"uid\": \"%s\", \"onOff\": \"%s\", \"mode\": \"%s\", \"roomTemperature\": %s, \"setTemperature\": -1, \"humidity\": %s, \"timestamp\": %d}",
+                	    deviceID, deviceID, "ON", "MONITOR", temp, hum, System.currentTimeMillis());
+
+                // Publicar al topico de AWS IoT
+                logger.info("Datos publicados de " + deviceID + ": " + message);
+                // Aquí llamarías al cliente MQTT para publicar el mensaje
+                 mqttClient.publish(topicStatus, message);
+            } else if (jsonObject.has("error")) {
+            	logger.error("Error del script Python: " + jsonObject.getString("error"));
+            }
+
+		} catch (Exception e) {
+			logger.error("Error al publicar datos al topico: " + topicStatus + ", Error: " + e);
+			e.printStackTrace();
+		}
+
+	}
+
+	// GETTERS Y SETTERS
 	public AWSIotMqttClient getMqttClient() {
 		return mqttClient;
 	}
@@ -303,5 +365,4 @@ public class AWSIoTBridge {
 		this.deviceID = deviceID;
 	}
 
-	
 }
