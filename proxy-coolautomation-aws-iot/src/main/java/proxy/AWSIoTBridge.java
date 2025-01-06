@@ -10,6 +10,7 @@ import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,8 @@ public class AWSIoTBridge {
 	private String topicCommands;
 	private String topicResponse;
 	private String topicStatus;
+	
+	private String scriptPython;
 
 	public AWSIoTBridge(ConfigLoader configLoader) throws Exception {
 
@@ -61,6 +64,8 @@ public class AWSIoTBridge {
 
 		certDir = configLoader.getProperty("mqtt.cert.dir");
 		certPassword = configLoader.getProperty("mqtt.cert.pass");
+		
+		scriptPython = configLoader.getProperty("comando.script.python");
 
 		// Cargar certificados en un KeyStore
 		KeyStore keyStore = KeyStore.getInstance("PKCS12");
@@ -160,6 +165,7 @@ public class AWSIoTBridge {
 		});
 	}
 
+	
 	private void monitorConnectionStatus() {
 		new Timer().schedule(new TimerTask() {
 			@Override
@@ -173,7 +179,9 @@ public class AWSIoTBridge {
 					
 //					publicarDatosTempHumCoolMaster();
 
-					publicarDatosTempHumCoolRaspberry();
+//					publicarDatosTempHumCoolRaspberry();
+					
+					publicarDatosTempHumCoolRaspberryVariosSensores();
 				} catch (AWSIotException e) {
 					logger.error("Error al publicar datos al topico: " + topicStatus);
 				}
@@ -287,6 +295,79 @@ public class AWSIoTBridge {
 		}
 
 	}
+	
+	private void publicarDatosTempHumCoolRaspberryVariosSensores() throws AWSIotException {
+	    try {
+	        String command = scriptPython; // Script que maneja los 2 sensores
+
+	        // Ejecutar el comando
+	        Process process = Runtime.getRuntime().exec(command);
+
+	        // Leer la salida estándar del script
+	        BufferedReader stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+	        // Leer la salida de error del script
+	        BufferedReader stdError = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
+	        StringBuilder jsonOutput = new StringBuilder();
+	        String line;
+
+	        // Capturar la salida estándar
+	        while ((line = stdInput.readLine()) != null) {
+	            jsonOutput.append(line);
+	        }
+
+	        // Capturar errores, si los hay
+	        System.out.println("Salida de error del script:");
+	        while ((line = stdError.readLine()) != null) {
+	            logger.error(line);
+	        }
+
+	        // Esperar a que el proceso termine
+	        int exitCode = process.waitFor();
+	        logger.info("El script terminó con código: " + exitCode);
+
+	        // Parsear la salida JSON del script
+	        JSONObject jsonObject = new JSONObject(jsonOutput.toString());
+	        if (jsonObject.has("sensors")) {
+	            JSONArray sensorsArray = jsonObject.getJSONArray("sensors");
+
+	            // Iterar sobre cada sensor en la respuesta
+	            for (int i = 0; i < sensorsArray.length(); i++) {
+	                JSONObject sensorData = sensorsArray.getJSONObject(i);
+
+	                if (sensorData.has("temperature") && sensorData.has("humidity") && sensorData.has("alarmThreshold")) {
+	                    String sensorName = sensorData.getString("sensor");
+	                    double temp = sensorData.getDouble("temperature");
+	                    double hum = sensorData.getDouble("humidity");
+	                    JSONObject thresholds = sensorData.getJSONObject("alarmThreshold");
+	                    double highThreshold = thresholds.optDouble("high", 40);
+	                    double lowThreshold = thresholds.optDouble("low", 10);
+
+	                    // Crear el mensaje JSON para publicar en MQTT
+	                    String message = String.format(
+	                        "{\"deviceId\": \"%s\", \"sensor\": \"%s\", \"uid\": \"%s\", \"onOff\": \"%s\", \"mode\": \"%s\", \"roomTemperature\": %s, \"setTemperature\": -1, \"humidity\": %s, \"alarmThreshold\": {\"high\": %s, \"low\": %s}, \"timestamp\": %d}",
+	                        deviceID + "_" + sensorName, sensorName, deviceID + "_" + sensorName, "ON", "SENSOR", temp, hum, highThreshold, lowThreshold, System.currentTimeMillis());
+
+	                    String topicForSensor = topicStatus + "_" + sensorName.replace(" ", "_").toLowerCase();
+	                    logger.info("Datos publicados de " + topicForSensor + ": " + message);
+	                    mqttClient.publish(topicForSensor, message); // Publica los datos del sensor
+
+	                } else if (sensorData.has("error")) {
+	                    logger.error("Error en " + sensorData.getString("sensor") + ": " + sensorData.getString("error"));
+	                }
+	            }
+	        } else if (jsonObject.has("error")) {
+	            logger.error("Error del script Python: " + jsonObject.getString("error"));
+	        }
+
+	    } catch (Exception e) {
+	        logger.error("Error al publicar datos al tópico: " + topicStatus + ", Error: " + e);
+	        e.printStackTrace();
+	    }
+	}
+
+
 
 	// GETTERS Y SETTERS
 	public AWSIotMqttClient getMqttClient() {
